@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MatchUp AI — MVP Starter</title>
+  <style>
+    /* Minimal, clean styling */
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa5b1;--accent:#4f46e5;}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#071023 0%, #0b1724 100%);color:#e6eef6}
+    .container{max-width:1100px;margin:28px auto;padding:20px;}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    h1{margin:0;font-size:20px}
+    .row{display:flex;gap:16px}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 20px rgba(2,6,23,.6)}
+    .left{flex:1;min-width:360px}
+    .right{width:420px}
+    label{font-size:13px;color:var(--muted)}
+    select,input[type="number"]{width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #173040;background:#071827;color:#e6eef6}
+    button{background:var(--accent);color:white;padding:10px 12px;border:0;border-radius:8px;cursor:pointer}
+    .players{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+    .player{background:#041827;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.03);cursor:pointer}
+    .player .meta{font-size:12px;color:var(--muted)}
+    .roster{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+    .roster .slot{background:#071b2a;padding:8px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
+    .simulate-area{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .boxscore{margin-top:12px;background:linear-gradient(180deg,#071c2a,#061223);padding:12px;border-radius:10px}
+    pre{white-space:pre-wrap;word-wrap:break-word;margin:0;font-family:ui-monospace,monospace}
+    .highlight{margin-top:10px;padding:10px;border-radius:8px;background:linear-gradient(90deg, rgba(79,70,229,.08), rgba(99,102,241,.02));color:#eaf0ff;font-size:13px}
+    .small{font-size:13px;color:var(--muted)}
+    .muted{color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div style="flex:1">
+        <h1>MatchUp AI — MVP Starter</h1>
+        <div class="small">Filter players, build rosters, simulate a fantasy matchup. Integrate AI later for recaps & images.</div>
+      </div>
+      <div>
+        <button id="resetBtn">Reset Sample Data</button>
+      </div>
+    </header>
+
+    <div class="row">
+      <div class="left card">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px">
+            <label>Decade</label>
+            <select id="decadeFilter">
+              <option value="all">All</option>
+              <option>1980s</option>
+              <option>1990s</option>
+              <option>2000s</option>
+              <option>2010s</option>
+              <option>2020s</option>
+            </select>
+          </div>
+          <div style="width:120px">
+            <label>Jersey #</label>
+            <input id="numberFilter" type="number" placeholder="Any" min="0" />
+          </div>
+          <div style="width:200px">
+            <label>Top Stat</label>
+            <select id="statFilter">
+              <option value="any">Any</option>
+              <option value="ppg">Points (PPG)</option>
+              <option value="rpg">Rebounds (RPG)</option>
+              <option value="apg">Assists (APG)</option>
+            </select>
+          </div>
+          <div style="flex:0 0 160px;display:flex;align-items:flex-end;">
+            <button id="applyFilters">Apply Filters</button>
+          </div>
+        </div>
+
+        <div class="players card" id="playersGrid" style="margin-top:12px"></div>
+
+        <div class="muted" style="margin-top:8px">Click a player to add to the currently selected roster (Team A or Team B).</div>
+      </div>
+
+      <div class="right card">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="flex:1">
+            <label>Team A Name</label>
+            <input id="teamAName" placeholder="Team A — All Time" />
+          </div>
+          <div style="flex:1">
+            <label>Team B Name</label>
+            <input id="teamBName" placeholder="Team B — All Decades" />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="selectTeamA" style="flex:1">Select Team A</button>
+          <button id="selectTeamB" style="flex:1">Select Team B</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Team A Roster (click to remove)</label>
+          <div id="teamARoster" class="roster"></div>
+        </div>
+
+        <div style="margin-top:10px">
+          <label>Team B Roster (click to remove)</label>
+          <div id="teamBRoster" class="roster"></div>
+        </div>
+
+        <div class="simulate-area">
+          <button id="simulateBtn" style="flex:1">Simulate Matchup</button>
+          <button id="exportBtn">Export Box Score</button>
+        </div>
+
+        <div id="resultArea" class="boxscore" style="display:none"></div>
+        <div id="recapArea" class="highlight" style="display:none"></div>
+        <div id="imagePlaceholders" style="display:none;margin-top:10px"></div>
+
+      </div>
+    </div>
+
+    <footer style="margin-top:18px" class="muted">
+      Starter includes simulated player sample data. Replace with real API data (SportsDataIO, Stats, BallDontLie, etc.) and then add AI hooks for recaps & images.
+    </footer>
+  </div>
+
+  <script>
+    /**************************************************************************
+     * MVP Starter JS
+     * - Sample player data (replace with real data from your API)
+     * - Filters (decade, number, stat)
+     * - Roster builder (Team A / Team B)
+     * - Simple simulation engine producing box score + recap
+     * - Places to integrate AI (commented)
+     **************************************************************************/
+
+    // ---------- Sample players (small set for demo) ----------
+    const samplePlayers = [
+      { id:1, name:"Michael Jordan", decade:"1990s", number:23, ppg:30.1, rpg:6.2, apg:5.3, pos:"G" },
+      { id:2, name:"LeBron James", decade:"2010s", number:23, ppg:27.0, rpg:7.4, apg:7.4, pos:"F" },
+      { id:3, name:"Kobe Bryant", decade:"2000s", number:24, ppg:25.0, rpg:5.2, apg:4.7, pos:"G" },
+      { id:4, name:"Shaquille O'Neal", decade:"2000s", number:34, ppg:23.7, rpg:10.9, apg:2.5, pos:"C" },
+      { id:5, name:"Larry Bird", decade:"1980s", number:33, ppg:24.3, rpg:10.0, apg:6.3, pos:"F" },
+      { id:6, name:"Stephen Curry", decade:"2010s", number:30, ppg:24.2, rpg:4.6, apg:6.5, pos:"G" },
+      { id:7, name:"Vince Carter", decade:"2000s", number:15, ppg:16.2, rpg:4.2, apg:2.8, pos:"G" },
+      { id:8, name:"Jerry Rice", decade:"1990s", number:80, ppg:0, rpg:0, apg:0, pos:"WR", notes:"NFL legend (example cross-sport filter idea)" },
+      { id:9, name:"Randy Moss", decade:"2000s", number:84, ppg:0, rpg:0, apg:0, pos:"WR", notes:"Historic #84 example" },
+      // add more players or load dynamically from API
+    ];
+
+    // ---------- App state ----------
+    let players = [...samplePlayers];
+    let activeTeam = 'A'; // which roster will receive clicks
+    const teamA = [];
+    const teamB = [];
+
+    // ---------- DOM refs ----------
+    const playersGrid = document.getElementById('playersGrid');
+    const teamARoster = document.getElementById('teamARoster');
+    const teamBRoster = document.getElementById('teamBRoster');
+    const decadeFilter = document.getElementById('decadeFilter');
+    const numberFilter = document.getElementById('numberFilter');
+    const statFilter = document.getElementById('statFilter');
+    const applyBtn = document.getElementById('applyFilters');
+    const selectTeamA = document.getElementById('selectTeamA');
+    const selectTeamB = document.getElementById('selectTeamB');
+    const simulateBtn = document.getElementById('simulateBtn');
+    const resultArea = document.getElementById('resultArea');
+    const recapArea = document.getElementById('recapArea');
+    const imagePlaceholders = document.getElementById('imagePlaceholders');
+    const resetBtn = document.getElementById('resetBtn');
+    const exportBtn = document.getElementById('exportBtn');
+
+    // ---------- Utility: render players ----------
+    function renderPlayers(list) {
+      playersGrid.innerHTML = '';
+      list.forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'player';
+        el.innerHTML = `
+          <div style="font-weight:600">${p.name}</div>
+          <div class="meta">${p.pos} • ${p.decade} • #${p.number} ${p.notes? '• '+p.notes : ''}</div>
+          <div style="margin-top:6px;font-size:13px">
+            <span class="meta">PPG: ${p.ppg || '-'} </span><br>
+            <span class="meta">RPG: ${p.rpg || '-'} </span><br>
+            <span class="meta">APG: ${p.apg || '-'} </span>
+          </div>
+        `;
+        el.addEventListener('click', ()=> addToRoster(p));
+        playersGrid.appendChild(el);
+      });
+    }
+
+    // ---------- Add/remove roster ----------
+    function addToRoster(player) {
+      const dest = activeTeam === 'A' ? teamA : teamB;
+      if (dest.find(x=>x.id===player.id)) {
+        alert('Player already in that roster');
+        return;
+      }
+      if (dest.length >= 8) { // arbitrary roster size limit for the MVP
+        alert('Roster full (8). Remove some players first.');
+        return;
+      }
+      dest.push(player);
+      renderRosters();
+    }
+
+    function removeFromRoster(id, team) {
+      const arr = team === 'A' ? teamA : teamB;
+      const idx = arr.findIndex(p=>p.id===id);
+      if (idx>=0) arr.splice(idx,1);
+      renderRosters();
+    }
+
+    // ---------- Render rosters ----------
+    function renderRosters() {
+      teamARoster.innerHTML = '';
+      teamBRoster.innerHTML = '';
+      teamA.forEach(p=>{
+        const el = document.createElement('div');
+        el.className = 'slot';
+        el.innerHTML = `<div><strong>${p.name}</strong> <div class="meta">${p.pos} • #${p.number} • ${p.decade}</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="removeFromRoster(${p.id},'A')">Remove</button>
+          </div>`;
+        teamARoster.appendChild(el);
+      });
+      teamB.forEach(p=>{
+        const el = document.createElement('div');
+        el.className = 'slot';
+        el.innerHTML = `<div><strong>${p.name}</strong> <div class="meta">${p.pos} • #${p.number} • ${p.decade}</div></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="removeFromRoster(${p.id},'B')">Remove</button>
+          </div>`;
+        teamBRoster.appendChild(el);
+      });
+    }
+    window.removeFromRoster = removeFromRoster; // expose for inline onclick
+
+    // ---------- Filters ----------
+    function applyFilters() {
+      const decade = decadeFilter.value;
+      const number = numberFilter.value;
+      const stat = statFilter.value;
+      let filtered = [...players];
+      if (decade !== 'all') filtered = filtered.filter(p => p.decade === decade);
+      if (number) filtered = filtered.filter(p => String(p.number) === String(number));
+      if (stat !== 'any') {
+        // show players that have a non-zero stat for that category or are top-ranked
+        filtered = filtered.filter(p => (p[stat] !== undefined && p[stat] > 0));
+        // optionally: sort by that stat descending
+        filtered.sort((a,b)=> (b[stat]||0) - (a[stat]||0));
+      }
+      renderPlayers(filtered);
+    }
+
+    applyBtn.addEventListener('click', applyFilters);
+
+    // ---------- Team select toggles ----------
+    selectTeamA.addEventListener('click', ()=> {
+      activeTeam = 'A';
+      selectTeamA.style.outline = '2px solid rgba(79,70,229,.33)';
+      selectTeamB.style.outline = 'none';
+    });
+    selectTeamB.addEventListener('click', ()=> {
+      activeTeam = 'B';
+      selectTeamB.style.outline = '2px solid rgba(79,70,229,.33)';
+      selectTeamA.style.outline = 'none';
+    });
+    // default selected
+    selectTeamA.click();
+
+    // ---------- Simple simulation engine ----------
+    // For MVP: use player averages (ppg/rpg/apg) and random variation to produce "fantasy" stat lines.
+    function simulateMatchup() {
+      if (teamA.length === 0 || teamB.length === 0) {
+        alert('Please add at least one player to each team.');
+        return;
+      }
+
+      // Helper: simulate stat around average with some variance
+      function simStat(avg) {
+        if (!avg || avg <= 0) return 0;
+        // simple variance: rand +/- up to 30%
+        const variation = (Math.random() * 0.6) - 0.3; // [-0.3, +0.3]
+        const raw = avg * (1 + variation);
+        return Math.max(0, Math.round(raw * 10) / 10); // one decimal
+      }
+
+      // build box score entries
+      function buildBoxForTeam(team) {
+        return team.map(p => {
+          const pts = simStat(p.ppg || 5) + Math.floor(Math.random()*12); // add some play-sim randomness
+          const rebs = Math.round(simStat(p.rpg || 1) * 10) / 10;
+          const asts = Math.round(simStat(p.apg || 1) * 10) / 10;
+          const stl = Math.floor(Math.random()*3);
+          const blk = Math.floor(Math.random()*3);
+          const fga = Math.max(1, Math.round(pts / (Math.random()*1.8 + 0.8))); // rough relation
+          const fg = Math.max(0, Math.round((pts / (fga||1)))); // simplified FG
+          // fantasy points (example scoring: pts + 1.2*r + 1.5*a + 3*stl + 3*blk)
+          const fantasy = Math.round((pts + 1.2*rebs + 1.5*asts + 3*stl + 3*blk) * 10) / 10;
+          return { player: p.name, pts, rebs, asts, stl, blk, fga, fg, fantasy };
+        });
+      }
+
+      const boxA = buildBoxForTeam(teamA);
+      const boxB = buildBoxForTeam(teamB);
+
+      const teamAScore = boxA.reduce((s,x)=>s+x.pts,0);
+      const teamBScore = boxB.reduce((s,x)=>s+x.pts,0);
+
+      // decide MVP by highest fantasy points
+      const allPlayers = [...boxA.map(x=>({...x, team:'A'})), ...boxB.map(x=>({...x, team:'B'}))];
+      allPlayers.sort((a,b)=>b.fantasy - a.fantasy);
+      const mvp = allPlayers[0];
+
+      // simple play-by-play recap generator
+      const plays = generateRecap(boxA, boxB, teamAScore, teamBScore);
+
+      // render result
+      renderResult({
+        teamAName: document.getElementById('teamAName').value || 'Team A',
+        teamBName: document.getElementById('teamBName').value || 'Team B',
+        scoreA: teamAScore,
+        scoreB: teamBScore,
+        boxA, boxB, mvp, plays
+      });
+
+      // Placeholder: integrate AI text generation here
+      // - Use an LLM to produce a nicer natural language game recap using the "plays" and MVP.
+      // - Example: call OpenAI GPT with a prompt describing the box score and request a 4-paragraph recap.
+      // (Don't include API keys in front-end. Proxy via backend.)
+    }
+
+    function generateRecap(boxA, boxB, scoreA, scoreB) {
+      // create a few notable moments using top performers
+      const topA = [...boxA].sort((a,b)=>b.fantasy-a.fantasy)[0];
+      const topB = [...boxB].sort((a,b)=>b.fantasy-a.fantasy)[0];
+      const recaps = [];
+      recaps.push(`${topA.player} led ${document.getElementById('teamAName').value || 'Team A'} with ${topA.pts} points and ${topA.rebs} rebounds.`);
+      recaps.push(`${topB.player} battled back for ${topB.pts} points and ${topB.asts} assists.`);
+      // add a close finish moment if necessary
+      if (Math.abs(scoreA - scoreB) <= 6) {
+        recaps.push(`The final minutes were intense — a late 3 forced a response, but the clock ran out on a comeback attempt.`);
+      } else {
+        recaps.push(`The margin was decided in the ${scoreA > scoreB ? 'second half surge' : 'first half surge'}.`);
+      }
+      recaps.push(`Final: ${scoreA} — ${scoreB}. MVP: ${topA.fantasy >= topB.fantasy ? topA.player : topB.player}.`);
+      return recaps;
+    }
+
+    function renderResult({teamAName, teamBName, scoreA, scoreB, boxA, boxB, mvp, plays}) {
+      resultArea.style.display = 'block';
+      recapArea.style.display = 'block';
+      imagePlaceholders.style.display = 'block';
+
+      resultArea.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><strong>${teamAName}</strong> — ${scoreA}</div>
+          <div style="font-size:13px;color:var(--muted)">MVP: ${mvp.player} (Team ${mvp.team}) — ${mvp.fantasy} fantasy pts</div>
+          <div><strong>${teamBName}</strong> — ${scoreB}</div>
+        </div>
+        <hr style="border-color:rgba(255,255,255,.04);margin:10px 0">
+        <div style="display:flex;gap:12px">
+          <div style="flex:1">
+            <strong>${teamAName} Box</strong>
+            <pre>${boxA.map(r => `${r.player.padEnd(22,' ')} PTS:${String(r.pts).padEnd(4,' ')} REB:${String(r.rebs).padEnd(4,' ')} AST:${String(r.asts).padEnd(4,' ')} FANT:${String(r.fantasy)}`).join('\n')}</pre>
+          </div>
+          <div style="flex:1">
+            <strong>${teamBName} Box</strong>
+            <pre>${boxB.map(r => `${r.player.padEnd(22,' ')} PTS:${String(r.pts).padEnd(4,' ')} REB:${String(r.rebs).padEnd(4,' ')} AST:${String(r.asts).padEnd(4,' ')} FANT:${String(r.fantasy)}`).join('\n')}</pre>
+          </div>
+        </div>
+      `;
+
+      recapArea.innerHTML = `<strong>Auto Recap</strong><div style="margin-top:8px">${plays.map(p=>'<div>'+p+'</div>').join('')}</div>`;
+
+      // Image placeholders for highlights — replace with AI-generated images
+      imagePlaceholders.innerHTML = `
+        <div class="muted" style="margin-bottom:8px">Highlights (AI images placeholder):</div>
+        <div style="display:flex;gap:8px">
+          <div class="card" style="padding:8px;width:150px;text-align:center">
+            <div style="font-weight:700">${mvp.player} Buzzer</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px">[AI image placeholder]</div>
+            <div style="margin-top:8px;background:#051827;padding:6px;border-radius:6px">Generate Image</div>
+          </div>
+          <div class="card" style="padding:8px;width:150px;text-align:center">
+            <div style="font-weight:700">Top Play</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px">[AI image placeholder]</div>
+            <div style="margin-top:8px;background:#051827;padding:6px;border-radius:6px">Generate Image</div>
+          </div>
+        </div>
+      `;
+
+      // NOTE: To integrate AI image generation:
+      // - Send a prompt describing the highlight and teams to an image generation API.
+      // - For example: "Generate a stylized action shot of {player} making a sky-high dunk in a retro 90s film grain style."
+      // - Because API keys must be kept secret, call your backend which invokes the image API, then return an image URL to the front-end to display here.
+    }
+
+    // ---------- Export box score ----------
+    exportBtn.addEventListener('click', ()=> {
+      if (resultArea.style.display === 'none') { alert('Simulate first'); return; }
+      const text = resultArea.innerText + '\n\n' + recapArea.innerText;
+      const blob = new Blob([text], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'boxscore.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    // ---------- Reset to sample data ----------
+    resetBtn.addEventListener('click', ()=> {
+      players = [...samplePlayers];
+      teamA.splice(0, teamA.length);
+      teamB.splice(0, teamB.length);
+      renderPlayers(players);
+      renderRosters();
+      resultArea.style.display = 'none';
+      recapArea.style.display = 'none';
+      imagePlaceholders.style.display = 'none';
+    });
+
+    // ---------- simulate click ----------
+    simulateBtn.addEventListener('click', simulateMatchup);
+
+    // ---------- initial render ----------
+    renderPlayers(players);
+    renderRosters();
+
+    // ---------- Developer notes ----------
+    /*
+      Next steps to move from MVP to connected product:
+      1) Replace samplePlayers with server-provided player DB (Postgres) populated from SportsDataIO or official stats API.
+      2) Add authentication + user accounts so users can save rosters.
+      3) Move simulation logic to backend (Python/Node) so you can:
+         - run deterministic sims,
+         - apply seeded RNG for reproducibility,
+         - call LLMs safely for recaps,
+         - call image generation APIs for highlights.
+      4) Add an LLM prompt template for "Game Recap" and an image prompt schema for highlight images.
+      5) Add unit tests for the simulation engine and integration tests for API calls.
+    */
+  </script>
+</body>
+</html>
